@@ -11,25 +11,6 @@
 #include <boost/algorithm/string/split.hpp>
 #include <boost/foreach.hpp>
 
-/*
-
-Symbol >
-
-    Takes result of process and outputs it to the file stated
-    If no file exists, create one
-    Overwrite any values in the target file before writing to it
-
-Symbol >>
-    Takes result of process and outputs it to the file stated
-    If no file exists, create one
-    Append the result to exisitng file (so push_back essentially)
-
-Symbol |
-    Takes result of process and uses it at a input into stated program
-
-
-
-
 bool Command::execute() //execute(string cmdStr, string argStr)
 {
     std::string argStr = parameters;
@@ -274,3 +255,24 @@ bool Semicolon::execute()
         return false; 
     }
 }
+
+bool InputRedirection::execute()
+{
+    return true;
+}
+
+bool SingleOutputRed::execute()
+{
+    return true;
+}
+
+bool DoubleOutputRed::execute()
+{
+    return true;
+}
+
+bool Pipe::execute()
+{
+    return true;
+}
+

@@ -82,4 +82,32 @@ class Semicolon : public Connector
         bool execute();
 };
 
+class InputRedirection : public Connector
+{
+    public:
+        InputRedirection() {};
+        bool execute();
+};
+
+class SingleOutputRed : public Connector
+{
+    public:
+        SingleOutputRed() {};
+        bool execute();
+};
+
+class DoubleOutputRed : public Connector
+{
+    public:
+        DoubleOutputRed() {};
+        bool execute();
+};
+
+class Pipe : public Connector
+{
+    public:
+        Pipe() {};
+        bool execute();
+};
+
 #endif

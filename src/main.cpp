@@ -67,7 +67,7 @@ void createTree(std::stack<Base *>& objects, std::vector<Base *>& postFix) //cre
 int main()
 {
     typedef boost::tokenizer<boost::char_separator<char> > tokenizer;
-    boost::char_separator<char> sep{" ", ";()"};
+    boost::char_separator<char> sep{" ", ";()<>|"};
     
     while(1)
     {
@@ -85,53 +85,57 @@ int main()
         std::stack<std::string> parenStack; //stack to compute amount of parantheses
         //std::cout << parenStack.size() << std::endl;
         
-        
-    try
-    {
-        //Iterates through the token to find parentheses and checks if there is an imbalance
-        for (tokenizer::iterator it = tok.begin(); it != tok.end(); it++) 
+        try
         {
-            //std::cout << *it << "Checking parentheses" << std::endl;
-            if (*it == "(")
+            //Iterates through the token to find parentheses and checks if there is an imbalance
+            for (tokenizer::iterator it = tok.begin(); it != tok.end(); it++) 
             {
-                //std::cout << "Pushing to paren stack" << std::endl;
-                parenStack.push(*it);
-            }
-            else if (*it == ")")
-            {
-                //std::cout << "Closing paren" << std::endl;
-                if (parenStack.empty())
+                //std::cout << *it << "Checking parentheses" << std::endl;
+                if (*it == "(")
                 {
-                    //imbalanced, throw error
-                    throw 'd';
+                    //std::cout << "Pushing to paren stack" << std::endl;
+                    parenStack.push(*it);
                 }
-                else
+                else if (*it == ")")
                 {
-                    //std::cout << "Popping" << std::endl;
-                    parenStack.pop();
+                    //std::cout << "Closing paren" << std::endl;
+                    if (parenStack.empty())
+                    {
+                        //imbalanced, throw error
+                        throw 'd';
+                    }
+                    else
+                    {
+                        //std::cout << "Popping" << std::endl;
+                        parenStack.pop();
+                    }
                 }
             }
-        }
-        if (parenStack.size() != 0)
-        {
-            //std::cout << "Imbalanced Parentheses" << std::endl;
-            throw 'e';
-        }
-       
-        bool notCommand = true;  
-        
-            for (tokenizer::iterator it = tok.begin(); it != tok.end(); it++) //ITERATE THROUGH EVERY TOKEN
+            if (parenStack.size() != 0)
             {
-                if (*it == "(" || *it == ")")
+                //std::cout << "Imbalanced Parentheses" << std::endl;
+                throw 'e';
+            }
+            
+            if (userCommand.find("<<") != std::string::npos || userCommand.find("< <") != std::string::npos || userCommand.find("> >") != std::string::npos || userCommand.find("| |") != std::string::npos)
+            {
+                throw 1; //invalid connector 
+            }
+           
+            bool notCommand = true; //FIXME: Name is confusing with use (the logic is flipped), use another name
+            
+            for (tokenizer::iterator it = tok.begin(); it != tok.end(); it++ ) //ITERATE THROUGH EVERY TOKEN
+            {
+                if (*it == "(" || *it == ")" )
                 {
-                    if (!commandLine.empty())
+                    if (!commandLine.empty() )
                     {
                         tokens.push_back(commandLine);
                         commandLine.clear();
                     }
                     tokens.push_back(*it);
                 }
-                else if (*it != ";" && *it != "||" && *it != "&&") //if not a connector 
+                else if (*it != ";" && *it != "|" && *it != "&&" && *it != "<" && *it != ">") //if not a connector 
                 {
                     if (notCommand) //if is command set to false so that we know
                     {
@@ -140,7 +144,7 @@ int main()
                     }
                     else
                     {
-                        commandLine += " " + *it; //append space and
+                        commandLine += " " + *it; //append space
                     }
                 }
                 else
@@ -154,26 +158,48 @@ int main()
                     {
                         tokens.push_back(commandLine);
                     }
+                    if(*it == ">" || *it == "|")
+                    {
+                        tokenizer::iterator pipeIter = it; //need new iter to keep old one safe
+                        pipeIter++;
+                        if (pipeIter != tok.end() )
+                        {
+                            if (*pipeIter == "|" && *it == "|")
+                            {
+                                it++;
+                                tokens.push_back("||");
+                            }
+                            else if (*pipeIter == ">" && *it == ">")
+                            {
+                                it++;
+                                tokens.push_back(">>");
+                            
+                            }
+                            else
+                            {
+                                tokens.push_back(*it);
+                            }
+                        }
+                        else
+                        {
+                            throw 1; //FIXME change throw value maybe
+                        }
+                    }
+                    else
+                    {
+                        tokens.push_back(*it);
+                    }
                     commandLine.clear();
-                    tokens.push_back(*it);
                 }
             } //FOR LOOP
-            
             //PUSHES IN LAST ARG IF NO CONNECTOR AFTER
-            if (!commandLine.empty())
+            if (!commandLine.empty() )
             {
                 tokens.push_back(commandLine);
             }
-            
-            // //TESTING LOOP 
-            // for(unsigned i = 0; i < tokens.size(); i++)
-            // {
-            //     std::cout << tokens.at(i) << std::endl;
-            // }
-            
-            else if (!tokens.empty())
+            else if (!tokens.empty() ) //FIXME TO ACCOUNT FOR NEW CONNECTORS
             {
-                if (tokens.at(tokens.size() - 1) == ";" || tokens.at(tokens.size() - 1) == "||" || tokens.at(tokens.size() - 1) == "&&")
+                if (tokens.at(tokens.size() - 1) == ";" || tokens.at(tokens.size() - 1) == "||" || tokens.at(tokens.size() - 1) == "&&" || tokens.at(tokens.size() - 1) == ">" || tokens.at(tokens.size() - 1) == "<" || tokens.at(tokens.size() - 1) == "|" || tokens.at(tokens.size() - 1) == ">>") 
                 {
                     throw 1; /// invalid connector
                 }
@@ -194,16 +220,17 @@ int main()
             std::vector<Base *> postFix;
             Base *pointer;
             
-            
-            for (unsigned int i = 0; i < tokens.size(); i++)
+            for (unsigned int i = 0; i < tokens.size(); i++ )
             {
                 //std::cout << "Is token connector" << std::endl;
                 //IF TOKEN IS CONNECTOR
-                if (tokens.at(i) == ";" || tokens.at(i) == "||" || tokens.at(i) == "&&" )
+                
+                //FIXME: If | is found, check to see if next char is also |. If so, connector is OR. Else it is pipe
+                if (tokens.at(i) == ";" || tokens.at(i) == "||" || tokens.at(i) == "&&" || tokens.at(i) == "<" || tokens.at(i) == ">" || tokens.at(i) == ">>" || tokens.at(i) == "|")
                 {
-                    if (!stack.empty())
+                    if (!stack.empty() )
                     {
-                        if (stack.top() == "||")
+                        if (stack.top() == "||") //FIXME: Might break due to piping
                         {
                             pointer = new Or;
                             postFix.push_back(pointer);
@@ -217,11 +244,34 @@ int main()
                         }
                         else if (stack.top() == ";")
                         {
-                            pointer = new Semicolon;\
+                            pointer = new Semicolon;
                             postFix.push_back(pointer);
                             stack.pop();
                         }
-                        
+                        else if (stack.top() == "<")
+                        {
+                            pointer = new InputRedirection;
+                            postFix.push_back(pointer);
+                            stack.pop();
+                        }
+                        else if (stack.top() == ">")
+                        {
+                            pointer = new SingleOutputRed;
+                            postFix.push_back(pointer);
+                            stack.pop();
+                        }
+                        else if (stack.top() == ">>")
+                        {
+                            pointer = new DoubleOutputRed;
+                            postFix.push_back(pointer);
+                            stack.pop();
+                        }
+                        else if (stack.top() == "|")
+                        {
+                            pointer = new Pipe;
+                            postFix.push_back(pointer);
+                            stack.pop();
+                        }
                     }
                     stack.push(tokens.at(i) );
                 }
@@ -235,13 +285,13 @@ int main()
                 {
                     //Goes through the stack of operators and converts and pops
                     // until open paren
-                    if(stack.empty())
+                    if(stack.empty()) //FIXME: Does this need to be here?
                     {
-                        std::cout << "empty stac" << std::endl;
+                        std::cout << "empty stack" << std::endl;
                     }
                     while(stack.top() != "(" )
                     {
-                        if (stack.top() == "||")
+                        if (stack.top() == "||") //FIXME: This might break due to piping
                         {
                             pointer = new Or;
                             postFix.push_back(pointer);
@@ -254,6 +304,26 @@ int main()
                         else if(stack.top() == ";")
                         {
                             pointer = new Semicolon;
+                            postFix.push_back(pointer);
+                        }
+                        else if(stack.top() == "<")
+                        {
+                            pointer = new InputRedirection;
+                            postFix.push_back(pointer);
+                        }
+                        else if(stack.top() == ">")
+                        {
+                            pointer = new SingleOutputRed;
+                            postFix.push_back(pointer);
+                        }
+                        else if(stack.top() == ">>")
+                        {
+                            pointer = new DoubleOutputRed;
+                            postFix.push_back(pointer);
+                        }
+                        else if(stack.top() == "|")
+                        {
+                            pointer = new Pipe; 
                             postFix.push_back(pointer);
                         }
                         stack.pop();
@@ -301,7 +371,11 @@ int main()
             }
             if (!stack.empty()) 
             {
-                if (stack.top() == "||")
+                if (stack.top() == ";")
+                {
+                    pointer = new Semicolon;
+                }
+                else if (stack.top() == "||") //FIXME: This might break due to piping
                 {
                     pointer = new Or;
                 }
@@ -309,10 +383,23 @@ int main()
                 {
                     pointer = new And;
                 }
-                else
+                else if (stack.top() == "<")
                 {
-                    pointer = new Semicolon;
+                    pointer = new InputRedirection;
                 }
+                else if (stack.top() == ">")
+                {
+                    pointer = new SingleOutputRed;
+                }
+                else if (stack.top() == ">>")
+                {
+                    pointer = new DoubleOutputRed;
+                }
+                else if (stack.top() == "|")
+                {
+                    pointer = new Pipe;
+                }
+                
                 postFix.push_back(pointer);
             }
             
@@ -329,31 +416,31 @@ int main()
             treePointer->root->execute(); //execute from root
             treePointer->destructor(treePointer->root); //deallocate memory
             delete treePointer; //delete container
-        } // END TRY BLOCK
-        
-        //CATCH BLOCK FOR INVALID CONNECTOR INPUT
-        catch (int formatError)
-        {
-            std::cout << "Invalid Input for Connectors: connectors cannot lead, end, or be consecutive" << std::endl; //TESTING ONLY, WILL SIMPLY PROMPT FOR INPUT AGAIN IF THIS HAPPENS
-        }
-        
-        //CATCH BLOCK FOR INVALID PARENTHESES
-        catch (char emptyError) 
-        {
-            if(emptyError == 'e')
-            {
-                std::cout << "Invalid Input: Imbalanced Parantheses or Empty Input" << std::endl; 
-            }
-        }
-        
-        //CATCH BLOCK FOR EXITTING LOOP AND DEALLOCATING MEMORY
-        catch (bool error)
-        {
-            treePointer->destructor(treePointer->root);
-            delete treePointer;
+            } // END TRY BLOCK
             
-            exit(0);
-        }
+            //CATCH BLOCK FOR INVALID CONNECTOR INPUT
+            catch (int formatError)
+            {
+                std::cout << "Invalid Connectors" << std::endl; //TESTING ONLY, WILL SIMPLY PROMPT FOR INPUT AGAIN IF THIS HAPPENS
+            }
+            
+            //CATCH BLOCK FOR INVALID PARENTHESES
+            catch (char emptyError) 
+            {
+                if(emptyError == 'e')
+                {
+                    std::cout << "Invalid Input: Imbalanced Parantheses or Empty Input" << std::endl; 
+                }
+            }
+            
+            //CATCH BLOCK FOR EXITTING LOOP AND DEALLOCATING MEMORY
+            catch (bool error)
+            {
+                treePointer->destructor(treePointer->root);
+                delete treePointer;
+                
+                exit(0);
+            }
     }
     
     return 0;
