@@ -12,6 +12,8 @@ rshell can also use the test command to test file paths with the flags -e, -f, o
 
 It can also handle precedence with parenthesis. Commands with nested parentheses will also work
 
+We have implemented output and input redirection (append, overwrite, and input)
+
 
 ## How to Use
 
