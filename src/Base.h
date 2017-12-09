@@ -9,7 +9,8 @@ class Base //ABSTRACT BASE CLASS
     public:
         Base() {};
         virtual ~Base() {};
-        virtual bool execute() = 0;
+        virtual bool execute(int, int) = 0;
+        virtual std::string getCommand() = 0;
 };
 
 /////////////////////////////////////////////////EXECUTABLE AND DERIVED CLASSES
@@ -18,7 +19,8 @@ class Executable : public Base
 {
     public:
         Executable() {};
-        virtual bool execute() = 0;
+        virtual bool execute(int, int) = 0;
+        virtual std::string getCommand() = 0;
 };
 
 class Command : public Executable
@@ -29,7 +31,8 @@ class Command : public Executable
     public:
         Command() : commandString(""), parameters("") {};
         Command(std::string element, std::string elements) : commandString(element), parameters(elements) {};
-        bool execute();
+        bool execute(int, int);
+        std::string getCommand();
 };
 
 class Test : public Executable
@@ -39,14 +42,16 @@ class Test : public Executable
     public: 
         Test() : flagAndPath("") {};
         Test(std::string userFlagAndPath) : flagAndPath(userFlagAndPath) {};
-        bool execute();
+        bool execute(int, int);
+        std::string getCommand();
 };
 
 class Exit : public Executable 
 {
     public:
         Exit() {};
-        bool execute();
+        bool execute(int, int);
+        std::string getCommand();
 };
 
 //////////////////////////////////////////////////CONNECTOR AND DERIVED CLASSES
@@ -58,56 +63,64 @@ class Connector : public Base
         Base *rhs;
         
         Connector() : lhs(0), rhs(0) {};
-        virtual bool execute() = 0;
+        virtual bool execute(int, int) = 0;
+        virtual std::string getCommand() = 0;
 };
 
 class And : public Connector
 {
     public:
         And() {};
-        bool execute();
+        bool execute(int, int);
+        std::string getCommand() {return "";};
 };
 
 class Or : public Connector
 {
     public:
         Or() {};
-        bool execute();
+        bool execute(int, int);
+        std::string getCommand() {return "";};
 };
 
 class Semicolon : public Connector
 {
     public:
         Semicolon() {};
-        bool execute();
+        bool execute(int, int);
+        std::string getCommand() {return "";};
 };
 
 class InputRedirection : public Connector
 {
     public:
         InputRedirection() {};
-        bool execute();
+        bool execute(int, int);
+        std::string getCommand() {return "";};
 };
 
 class SingleOutputRed : public Connector
 {
     public:
         SingleOutputRed() {};
-        bool execute();
+        bool execute(int, int);
+        std::string getCommand() {return "";};
 };
 
 class DoubleOutputRed : public Connector
 {
     public:
         DoubleOutputRed() {};
-        bool execute();
+        bool execute(int, int);
+        std::string getCommand() {return "";};
 };
 
 class Pipe : public Connector
 {
     public:
         Pipe() {};
-        bool execute();
+        bool execute(int, int);
+        std::string getCommand() {return "";};
 };
 
 #endif

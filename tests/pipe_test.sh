@@ -42,5 +42,11 @@ echo "|" | tr A-Z a-z ||||exit
 
 echo "|" | tr A-Z a-z || exit
 
+echo a | print
+
+cat < existingInputFile | tr A-Z a-z | tee newOutputFile1 | tr a-z A-Z > newOutputFile2
+
+cat < existingInputFile | tr A-Z a-z | tee newOutputFile1 |
+
 EOF
 

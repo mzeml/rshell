@@ -42,6 +42,8 @@ exit(0) command causes 5 possible blocks of memory leakage
 
 If you echo quotation marks, they are echoed as well
 
+Using quotes might break on certain test cases (like above)
+
 Certain edgecases do not generate an error; program goes to next line
 
 

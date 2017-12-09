@@ -6,12 +6,14 @@
 #include <unistd.h>
 #include <sys/wait.h>
 #include <sys/stat.h>
+#include <fcntl.h> //For O_ flags
+#include <fstream>
 
 #include <boost/algorithm/string/classification.hpp>
 #include <boost/algorithm/string/split.hpp>
 #include <boost/foreach.hpp>
 
-bool Command::execute() //execute(string cmdStr, string argStr)
+bool Command::execute(int incoming, int outgoing) //execute(string cmdStr, string argStr)
 {
     std::string argStr = parameters;
     std::string cmdStr = commandString;
@@ -43,44 +45,61 @@ bool Command::execute() //execute(string cmdStr, string argStr)
     }
    
     int status;
-    
     pid_t child_id;
+    bool errorCapture = true; //need this or else certain cases have exit failing!!!!
+    //If we dont return the bool, then exit never runs for child (it just returns)
     
     //Begin execution process
     
     child_id = fork(); //assigns id to child
     
-    if (child_id < 0) //Forks child and checks for error
+    if (child_id == -1) //Forks child and checks for error
     {
         perror("+++++ERROR: Forking failed!+++++\n");
-        return false;
+        errorCapture = false;
     }
     
     else if (child_id == 0) //This is the child process
     {
-        if (execvp(args[0], args) < 0) //Actual exection
+        if (dup2(incoming, 0) == -1) //was 0for outgoing
+        {
+            //close(in);
+            perror("-----ERROR: Dup2() Execution failed! (incoming)----- \n");
+            
+            errorCapture = false;
+        }
+        
+        if (dup2(outgoing, 1) == -1)
+        {
+            //close(out);
+            perror("-----ERROR: Dup2() Execution failed! (outgoing)----- \n");
+            
+            errorCapture = false;
+        }
+        
+        if (execvp(args[0], args) ==  -1) //Actual execution occurs HERE
         {
             perror("-----ERROR: Execution failed!----- \n");
-            exit(1);  //******************************************
-            //return false; 
+            exit(1);    //TEST!!!!!!!!
+            //return false;  not needed, exit runs before it
         }
     }
-    
     else //this is the parent process
     {
         if (waitpid(child_id, &status, 0) == -1)
         {
             perror("*****ERROR: Wait failed!*****\n");
-            return false;
+            errorCapture = false;
         }
         if (WEXITSTATUS(status) != 0)
         {
-            return false;
+            errorCapture = false;
         }
     }
-    return true;
+    return errorCapture;
 }
-bool Test::execute() //Handles test command and brackets
+
+bool Test::execute(int incoming, int outgoing) //Handles test command and brackets
 {
     std::string flag;
     std::string filePath;
@@ -203,15 +222,15 @@ bool Test::execute() //Handles test command and brackets
     }
     return returnBool;
 }
-bool Exit::execute() 
+bool Exit::execute(int incoming, int outgoing) 
 {
     throw false;
 }
-bool And::execute()
+bool And::execute(int incoming, int outgoing)
 {
-    if (lhs->execute()) //left returns true
+    if (lhs->execute(incoming, outgoing)) //left returns true
     {
-        if(rhs->execute()) //right successful true
+        if(rhs->execute(incoming, outgoing)) //right successful true
         {
             return true;
         }
@@ -225,15 +244,15 @@ bool And::execute()
         return false; 
     }
 }
-bool Or::execute() 
+bool Or::execute(int incoming, int outgoing) 
 {
-    if (lhs->execute()) //left successful, don't execute right
+    if (lhs->execute(incoming, outgoing)) //left successful, don't execute right
     {
         return true;
     }
     else 
     {
-        if (rhs->execute()) //right successful 
+        if (rhs->execute(incoming, outgoing)) //right successful 
         {
             return true;
         }
@@ -243,10 +262,10 @@ bool Or::execute()
         }
     }
 }
-bool Semicolon::execute()
+bool Semicolon::execute(int incoming, int outgoing)
 {
-    lhs->execute(); //execute left child first
-    if (rhs->execute()) //right hand child's success determines the bool value that execute returns
+    lhs->execute(incoming, outgoing); //execute left child first
+    if (rhs->execute(incoming, outgoing)) //right hand child's success determines the bool value that execute returns
     {
         return true; 
     }
@@ -256,23 +275,92 @@ bool Semicolon::execute()
     }
 }
 
-bool InputRedirection::execute()
+bool InputRedirection::execute(int incoming, int outgoing)
 {
+    bool success; 
+    std::string inputFile =  rhs->getCommand();
+    
+
+    std::ifstream noFile(inputFile.c_str()); //if file doesn't exist error out
+    if(!noFile)
+    {
+        std::cout << "ERROR: No such file exists!\n";
+        // exit(0);
+        return false;
+    }
+    incoming = open(inputFile.c_str(),O_RDONLY);
+    success = lhs->execute(incoming, outgoing);
+    close(incoming);
+    return success;
+}
+
+bool SingleOutputRed::execute(int incoming, int outgoing)
+{ 
+    //std::cout << "TEST single out" << std::endl;
+    bool success;
+    std::string outputFile = rhs->getCommand();
+    outgoing = open(outputFile.c_str(), O_WRONLY | O_CREAT | O_TRUNC, S_IRWXU);
+    success = lhs->execute(incoming, outgoing);
+    close(outgoing);
+    return success; 
+}
+
+bool DoubleOutputRed::execute(int incoming, int outgoing)
+{
+    //std::cout << "TEST double out" << std::endl;
+    bool success; 
+    std::string outputFile = rhs->getCommand();
+    outgoing = open(outputFile.c_str(), O_WRONLY | O_CREAT | O_APPEND, S_IRWXU);
+    success = lhs->execute(incoming, outgoing);
+    close(outgoing);
+    return success; 
+}
+
+bool Pipe::execute(int incoming, int outgoing)
+{
+    //FIXME: pip casuing inf loop atm
+    
+    //std::cout << "TEST CALLED PIPE" << std::endl;
+    int pipeArray[2];
+    if (pipe(pipeArray) == -1)
+    {
+        perror("Pipe failed");
+        return false;
+    }
+    if (!lhs->execute(incoming, pipeArray[1]))
+    {
+        return false;
+    }
+    //std::cout << "TEST CALLED PIPE1" << std::endl;
+    close(pipeArray[1]);
+    
+    if (!rhs->execute(pipeArray[0], outgoing))
+    {
+        return false;
+    }
+    //std::cout << "TEST CALLED PIPE2" << std::endl;
+    close(pipeArray[0]);
     return true;
 }
 
-bool SingleOutputRed::execute()
+std::string Command::getCommand()
 {
-    return true;
+    if (parameters.empty())
+    {
+        return commandString;
+    }
+    else
+    {
+        return commandString + " " + parameters;
+    }
+    
 }
-
-bool DoubleOutputRed::execute()
+std::string Test::getCommand()
 {
-    return true;
+    return "test"; //in case user wants file named test
 }
-
-bool Pipe::execute()
+std::string Exit::getCommand()
 {
-    return true;
+    return "exit"; //in case user wants file named exit
 }
 

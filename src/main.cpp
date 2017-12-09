@@ -14,15 +14,15 @@ class Tree
         Tree() : root(0) {};
         Tree(Base *pointer) : root(pointer) {};
         
-        void destructor(Base *);
+        void treeDestructor(Base *);
 };
 
-void Tree::destructor(Base *curr) //will deallocate memory in tree (Base objects)
+void Tree::treeDestructor(Base *curr) //will deallocate memory in tree (Base objects)
 {
     if(dynamic_cast<Executable *>(curr) == NULL)
     {
-        destructor(dynamic_cast<Connector *>(curr)->lhs);
-        destructor(dynamic_cast<Connector *>(curr)->rhs);
+        treeDestructor(dynamic_cast<Connector *>(curr)->lhs);
+        treeDestructor(dynamic_cast<Connector *>(curr)->rhs);
     }
     delete curr; 
 }
@@ -122,7 +122,7 @@ int main()
                 throw 1; //invalid connector 
             }
            
-            bool notCommand = true; //FIXME: Name is confusing with use (the logic is flipped), use another name
+            bool isCommand = true;
             
             for (tokenizer::iterator it = tok.begin(); it != tok.end(); it++ ) //ITERATE THROUGH EVERY TOKEN
             {
@@ -137,9 +137,9 @@ int main()
                 }
                 else if (*it != ";" && *it != "|" && *it != "&&" && *it != "<" && *it != ">") //if not a connector 
                 {
-                    if (notCommand) //if is command set to false so that we know
+                    if (isCommand) //if is command set to false so that we know
                     {
-                        notCommand = false;
+                        isCommand = false;
                         commandLine = *it;
                     }
                     else
@@ -149,11 +149,11 @@ int main()
                 }
                 else
                 {
-                    if (notCommand) 
+                    if (isCommand) 
                     {
                         throw 1; //invalid connector 
                     }
-                    notCommand = true;
+                    isCommand = true;
                     if (!commandLine.empty())
                     {
                         tokens.push_back(commandLine);
@@ -197,7 +197,7 @@ int main()
             {
                 tokens.push_back(commandLine);
             }
-            else if (!tokens.empty() ) //FIXME TO ACCOUNT FOR NEW CONNECTORS
+            else if (!tokens.empty() )
             {
                 if (tokens.at(tokens.size() - 1) == ";" || tokens.at(tokens.size() - 1) == "||" || tokens.at(tokens.size() - 1) == "&&" || tokens.at(tokens.size() - 1) == ">" || tokens.at(tokens.size() - 1) == "<" || tokens.at(tokens.size() - 1) == "|" || tokens.at(tokens.size() - 1) == ">>") 
                 {
@@ -222,15 +222,12 @@ int main()
             
             for (unsigned int i = 0; i < tokens.size(); i++ )
             {
-                //std::cout << "Is token connector" << std::endl;
                 //IF TOKEN IS CONNECTOR
-                
-                //FIXME: If | is found, check to see if next char is also |. If so, connector is OR. Else it is pipe
                 if (tokens.at(i) == ";" || tokens.at(i) == "||" || tokens.at(i) == "&&" || tokens.at(i) == "<" || tokens.at(i) == ">" || tokens.at(i) == ">>" || tokens.at(i) == "|")
                 {
                     if (!stack.empty() )
                     {
-                        if (stack.top() == "||") //FIXME: Might break due to piping
+                        if (stack.top() == "||")
                         {
                             pointer = new Or;
                             postFix.push_back(pointer);
@@ -268,6 +265,7 @@ int main()
                         }
                         else if (stack.top() == "|")
                         {
+                            //set a flag for exec to know this is a pipe
                             pointer = new Pipe;
                             postFix.push_back(pointer);
                             stack.pop();
@@ -285,13 +283,13 @@ int main()
                 {
                     //Goes through the stack of operators and converts and pops
                     // until open paren
-                    if(stack.empty()) //FIXME: Does this need to be here?
-                    {
-                        std::cout << "empty stack" << std::endl;
-                    }
+                    // if(stack.empty()) //FIXME: Does this need to be here?
+                    // {
+                    //     std::cout << "empty stack" << std::endl;
+                    // }
                     while(stack.top() != "(" )
                     {
-                        if (stack.top() == "||") //FIXME: This might break due to piping
+                        if (stack.top() == "||")
                         {
                             pointer = new Or;
                             postFix.push_back(pointer);
@@ -413,10 +411,10 @@ int main()
             }
             
             treePointer->root = objects.top();
-            treePointer->root->execute(); //execute from root
-            treePointer->destructor(treePointer->root); //deallocate memory
+            treePointer->root->execute(0, 1); //execute from root
+            treePointer->treeDestructor(treePointer->root); //deallocate memory
             delete treePointer; //delete container
-            } // END TRY BLOCK
+        } // END TRY BLOCK
             
             //CATCH BLOCK FOR INVALID CONNECTOR INPUT
             catch (int formatError)
@@ -431,12 +429,13 @@ int main()
                 {
                     std::cout << "Invalid Input: Imbalanced Parantheses or Empty Input" << std::endl; 
                 }
+                //delete treePointer; //ADDED CHECKING FOR EXIT ISSUE!!!!!!!!
             }
             
             //CATCH BLOCK FOR EXITTING LOOP AND DEALLOCATING MEMORY
             catch (bool error)
             {
-                treePointer->destructor(treePointer->root);
+                treePointer->treeDestructor(treePointer->root);
                 delete treePointer;
                 
                 exit(0);
