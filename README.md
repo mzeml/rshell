@@ -12,6 +12,8 @@ rshell can also use the test command to test file paths with the flags -e, -f, o
 
 It can also handle precedence with parenthesis. Commands with nested parentheses will also work
 
+We have implemented output and input redirection (append, overwrite, and input)
+
 
 ## How to Use
 
@@ -39,6 +41,8 @@ As of right now, ending a command with a connector is not valid. Connectors cann
 exit(0) command causes 5 possible blocks of memory leakage
 
 If you echo quotation marks, they are echoed as well
+
+Using quotes might break on certain test cases (like above)
 
 Certain edgecases do not generate an error; program goes to next line
 

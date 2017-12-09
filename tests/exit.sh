@@ -17,4 +17,13 @@ ls exit
 
 exit 123
 
+exitexitexitexit
+
+exit exit eeeexit exit
+
+ exit
+
+   exit
+
+
 EOF
